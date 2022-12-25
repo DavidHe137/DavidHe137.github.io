@@ -1,0 +1,63 @@
+@import "normalize.css";
+@import url("https://fonts.googleapis.com/css2?family=Montserrat&family=Mulish&display=swap");
+
+/* https://coolors.co */
+:root {
+	--color-1: #f1faee;
+	--color-2: #e63946;
+	--color-3: #1d3557;
+	--color-4: #457b9d;
+	--color-5: #a8dadc;
+	--title-font: "Mulish", sans-serif;
+	--paragraph-font: "Montserrat", sans-serif;
+}
+
+html {
+	background-color: var(--color-1);
+	font-size: 16px;
+	font-family: var(--paragraph-font);
+	padding: 1.5em 0;
+}
+@media screen and (min-width: 320px) {
+	html {
+		font-size: calc(16px + 6 * ((100vw - 320px) / 680));
+	}
+}
+@media screen and (min-width: 1000px) {
+	html {
+		font-size: 22px;
+	}
+}
+
+section {
+	max-width: 650px;
+	margin: 0 auto;
+	padding: 0 40px;
+}
+
+h1,
+h2 {
+	font-family: var(--title-font);
+	color: var(--color-3);
+}
+
+a {
+	color: var(--color-4);
+	text-decoration: none;
+}
+
+#links {
+	display: flex;
+	gap: 0.5em;
+}
+
+footer {
+	position: fixed;
+	right: 0;
+	bottom: 0;
+	width: 100%;
+	text-align: right;
+	font-size: 12px;
+	padding: 1em 1em;
+	color: var(--color-3);
+}
