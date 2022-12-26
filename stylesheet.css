@@ -56,15 +56,25 @@ section {
 h1,
 h2 {
 	font-family: var(--title-font);
-	color: var(--color-3);
+	color: inherit;
 }
 
 a {
 	color: inherit;
 	text-decoration: none;
+	display: inline-block;
 }
 
-/* ------------------------------ Social Links ------------------------------ */
+/* ------------------------------ Links ------------------------------ */
+header > a {
+	transition: color 200ms ease-in-out;
+	color: var(--color-3);
+}
+
+header > a:hover {
+	color: var(--color-4);
+}
+
 #links {
 	color: var(--color-4);
 	display: flex;
