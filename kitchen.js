@@ -262,10 +262,10 @@ const neonMat = new THREE.MeshBasicMaterial({
 	transparent: true,
 	toneMapped: false,
 });
-framed("about", neonMat, [0, 3.7], [2.8, 0.84]);
+framed("about", neonMat, [0, 3.55], [2.8, 0.84]);
 focusables.about.w = 1.6;
 const neonLight = new THREE.PointLight("#ff4fa3", 3, 4, 2);
-neonLight.position.set(0, 3.65, -1.0);
+neonLight.position.set(0, 3.5, -1.0);
 scene.add(neonLight);
 
 
@@ -300,9 +300,9 @@ const poster = (id, image, title, authors, venue, links, position) => {
 	texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
 	framed(id, new THREE.MeshBasicMaterial({ map: texture, color: "#e8e2d6" }), position, [0.9, 0.93], "#151515", rects);
 };
-poster("acs", acsImage, "Action Chunk Scheduling for Batched Robot Policy Serving", "Rohan Bansal*, David He*, Nadun Ranawaka Arachchige, Zhenyang Chen, Soobum Kim, Kexin Rong, Danfei Xu", "CoRL 2026", [["arXiv ↗", "https://arxiv.org/abs/2608.00337"], ["project page ↗", "https://gatech-rl2.github.io/actionchunkscheduling/"]], [-0.55, 2.2]);
-poster("cdgs", cdgsImage, "Compositional Diffusion with Guided Search for Long-Horizon Planning", "Utkarsh A Mishra, David He, Yongxin Chen, Danfei Xu", "ICLR 2026 (Oral)", [["arXiv ↗", "https://arxiv.org/abs/2601.00126"], ["project page ↗", "https://cdgsearch.github.io"]], [0.55, 2.2]);
-focusables.papers = { group: new THREE.Object3D().translateY(2.2), w: 2.1, h: 0.95, links: [] };
+poster("acs", acsImage, "Action Chunk Scheduling for Batched Robot Policy Serving", "Rohan Bansal*, David He*, Nadun Ranawaka Arachchige, Zhenyang Chen, Soobum Kim, Kexin Rong, Danfei Xu", "CoRL 2026", [["arXiv ↗", "https://arxiv.org/abs/2608.00337"], ["project page ↗", "https://gatech-rl2.github.io/actionchunkscheduling/"]], [-0.55, 2.1]);
+poster("cdgs", cdgsImage, "Compositional Diffusion with Guided Search for Long-Horizon Planning", "Utkarsh A Mishra, David He, Yongxin Chen, Danfei Xu", "ICLR 2026 (Oral)", [["arXiv ↗", "https://arxiv.org/abs/2601.00126"], ["project page ↗", "https://cdgsearch.github.io"]], [0.55, 2.1]);
+focusables.papers = { group: new THREE.Object3D().translateY(2.1), w: 2.1, h: 0.95, links: [] };
 
 const bulbs = [-1.65, 1.65, 4.7].map((x) => {
 	const pendant = new THREE.Group();
