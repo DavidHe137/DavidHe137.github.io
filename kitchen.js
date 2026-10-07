@@ -9,6 +9,15 @@ import { FilmPass } from "three/addons/postprocessing/FilmPass.js";
 import { ShaderPass } from "three/addons/postprocessing/ShaderPass.js";
 import { VignetteShader } from "three/addons/shaders/VignetteShader.js";
 
+const load = (src) => new Promise((resolve) => Object.assign(new Image(), { src, onload: (e) => resolve(e.target) }));
+const [acsImage, cdgsImage] = await Promise.all([
+	load("/assets/acs.png"),
+	load("/assets/cdgs.png"),
+	document.fonts.load("100px Yellowtail"),
+	document.fonts.load("30px 'EB Garamond'"),
+	document.fonts.load("bold 30px 'Playfair Display'"),
+]);
+
 const lite = matchMedia("(max-width: 700px), (pointer: coarse)").matches;
 const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
@@ -212,9 +221,85 @@ for (let i = 0; i < 5; i++) {
 	}
 }
 
-const bulbs = [-1.8, 0.4, 2.5].map((x) => {
+const focusables = {};
+const framed = (id, material, [x, y], [w, h], frame) => {
+	const group = new THREE.Group();
+	group.position.set(x, y, -1.55);
+	group.userData.pick = id;
+	scene.add(group);
+	if (frame) add(group, new THREE.BoxGeometry(w + 0.1, h + 0.1, 0.05), mat(frame, 0.5), [0, 0, -0.02]);
+	add(group, new THREE.PlaneGeometry(w, h), material, [0, 0, 0.01]).castShadow = false;
+	focusables[id] = { group, w, h };
+};
+
+const wrap = (g, text, x, y, width, lineHeight) => {
+	let line = "";
+	for (const word of text.split(" ")) {
+		if (line && g.measureText(line + word).width > width) {
+			g.fillText(line, x, y);
+			y += lineHeight;
+			line = "";
+		}
+		line += word + " ";
+	}
+	g.fillText(line, x, y);
+	return y + lineHeight;
+};
+
+const neonMat = new THREE.MeshBasicMaterial({
+	map: canvasTexture(1200, 360, (g) => {
+		g.font = "210px Yellowtail";
+		g.textAlign = "center";
+		g.textBaseline = "middle";
+		g.shadowColor = "#ff4fa3";
+		g.fillStyle = "#ffd6ec";
+		for (const blur of [70, 35, 12]) {
+			g.shadowBlur = blur;
+			g.fillText("David He", 600, 175);
+		}
+	}),
+	transparent: true,
+	toneMapped: false,
+});
+framed("about", neonMat, [0, 3.35], [2.8, 0.84]);
+const neonLight = new THREE.PointLight("#ff4fa3", 3, 4, 2);
+neonLight.position.set(0, 3.3, -1.0);
+scene.add(neonLight);
+
+const letterboard = canvasTexture(560, 420, (g) => {
+	g.fillStyle = "#1c1c1c";
+	g.fillRect(0, 0, 560, 420);
+	g.fillStyle = "#262626";
+	for (let y = 0; y < 420; y += 14) g.fillRect(0, y, 560, 4);
+	g.fillStyle = "#f4f1ea";
+	g.textAlign = "center";
+	g.font = "bold 46px Helvetica, Arial, sans-serif";
+	["FIND MY", "CODE ON", "GITHUB", "@DAVIDHE137"].forEach((line, i) => g.fillText(line, 280, 95 + i * 84));
+});
+framed("github", mat("#ffffff", 0.9, { map: letterboard }), [-2.5, 2.45], [0.8, 0.6], "#a8723f");
+
+const poster = (image, title, authors, venue) =>
+	canvasTexture(600, 680, (g) => {
+		g.fillStyle = "#f6f0e3";
+		g.fillRect(0, 0, 600, 680);
+		const h = Math.min(300, (image.height * 520) / image.width);
+		g.drawImage(image, 40, 40, 520, h);
+		g.fillStyle = "#1f1712";
+		g.font = "bold 38px 'Playfair Display'";
+		let y = wrap(g, title, 40, h + 110, 520, 46);
+		g.fillStyle = "#5a4c40";
+		g.font = "25px 'EB Garamond'";
+		y = wrap(g, authors, 40, y + 10, 520, 31);
+		g.fillStyle = "#8c2a2a";
+		g.font = "italic 32px 'EB Garamond'";
+		g.fillText(venue, 40, y + 20);
+	});
+framed("acs", mat("#b8b0a3", 0.9, { map: poster(acsImage, "Action Chunk Scheduling for Batched Robot Policy Serving", "Rohan Bansal*, David He*, Nadun Ranawaka Arachchige, Zhenyang Chen, Soobum Kim, Kexin Rong, Danfei Xu", "CoRL 2026") }), [1.3, 2.5], [0.9, 1.02], "#151515");
+framed("cdgs", mat("#b8b0a3", 0.9, { map: poster(cdgsImage, "Compositional Diffusion with Guided Search for Long-Horizon Planning", "Utkarsh A Mishra, David He, Yongxin Chen, Danfei Xu", "ICLR 2026 (Oral)") }), [3.45, 2.5], [0.9, 1.02], "#151515");
+
+const bulbs = [-1.65, 2.4, 4.7].map((x) => {
 	const pendant = new THREE.Group();
-	pendant.position.set(x, 6, -0.3);
+	pendant.position.set(x, 6, 0.2);
 	scene.add(pendant);
 	add(pendant, new THREE.CylinderGeometry(0.01, 0.01, 3), mat("#111"), [0, -1.5, 0]);
 	add(pendant, new THREE.CylinderGeometry(0.06, 0.06, 0.14, 16), mat("#b08a4a", 0.3, { metalness: 1 }), [0, -3.05, 0]);
@@ -255,7 +340,17 @@ const steam = Array.from({ length: 8 }, () => {
 });
 
 add(scene, new THREE.BoxGeometry(1.5, 0.08, 0.9), mat("#ffffff", 0.6, { map: wood("#c79a62") }), [-2.4, 0.04, 0.55]);
-add(scene, new THREE.CapsuleGeometry(0.09, 0.55, 8, 16), mat("#3f7a2c", 0.45), [-2.75, 0.17, 0.5]).rotation.z = Math.PI / 2 - 0.2;
+const skin = mat("#2f6b25", 0.45);
+const flesh = mat("#d8eab0", 0.6);
+const cutX = -2.67;
+const cucumber = add(scene, new THREE.CylinderGeometry(0.09, 0.09, 1, 24), [skin, flesh, flesh], [0, 0.17, 0.54]);
+cucumber.rotation.z = Math.PI / 2;
+const cucumberEnd = add(scene, sphere, skin, [0, 0.17, 0.54], [0.06, 0.09, 0.09]);
+const slices = Array.from({ length: 15 }, (_, i) => {
+	const s = add(scene, new THREE.CylinderGeometry(0.09, 0.09, 0.025, 24), [skin, flesh, flesh], [cutX + 0.1 + (i % 5) * 0.06 + Math.random() * 0.02, 0.095 + Math.floor(i / 5) * 0.02, 0.45 + Math.random() * 0.2]);
+	s.rotation.set(Math.random() * 0.2, 0, Math.random() * 0.2);
+	return s;
+});
 add(scene, sphere, mat("#4a2350", 0.3), [-1.95, 0.2, 0.75], [0.13, 0.12, 0.2]);
 add(scene, sphere, mat("#c9302c", 0.3), [-1.8, 0.18, 0.4], [0.12, 0.11, 0.12]);
 add(scene, new THREE.CylinderGeometry(0.02, 0.02, 0.05), mat("#3f7a2c"), [-1.8, 0.3, 0.4]);
@@ -364,8 +459,12 @@ const hat = new THREE.Group();
 chef.head.add(hat);
 add(hat, new THREE.CylinderGeometry(0.17, 0.15, 0.22, 32), mat("#ffffff", 0.8), [0, 0.42, -0.02]);
 add(hat, sphere, mat("#ffffff", 0.8), [0, 0.58, -0.02], [0.24, 0.14, 0.22]);
-add(chef.arms[0], new THREE.CylinderGeometry(0.02, 0.02, 0.8), mat("#a0703c", 0.6), [0, -0.65, 0]);
-add(chef.arms[0], sphere, mat("#a0703c", 0.6), [0, -1.05, 0], [0.06, 0.04, 0.08]);
+const spoonWood = mat("#a0703c", 0.6);
+const spoon = add(scene, new THREE.CylinderGeometry(0.02, 0.02, 1).translate(0, 0.5, 0), spoonWood, [0, 0, 0]);
+const spoonBowl = add(scene, sphere, spoonWood, [0, 0, 0], [0.06, 0.04, 0.08]);
+const chefPaw = new THREE.Object3D();
+chefPaw.position.y = -0.31;
+chef.arms[0].add(chefPaw);
 
 add(chef.rat, sphere, mat("#f7f4ee", 0.85), [0, 0.38, 0.16], [0.26, 0.3, 0.18]);
 
@@ -374,7 +473,7 @@ add(sous.rat, sphere, mat("#3d5a80", 0.9), [0, 0.38, 0.16], [0.26, 0.3, 0.18]);
 sous.rat.position.set(-2.4, 0, -0.35);
 add(sous.rat, new THREE.TorusGeometry(0.2, 0.05, 12, 32), mat("#b0302a", 0.8), [0, 0.8, 0]).rotation.x = Math.PI / 2;
 add(sous.arms[0], new THREE.CylinderGeometry(0.025, 0.025, 0.16), mat("#3a2412", 0.5), [0, -0.38, 0]);
-add(sous.arms[0], new THREE.BoxGeometry(0.012, 0.42, 0.11), mat("#d8dde2", 0.2, { metalness: 1 }), [0, -0.66, -0.03]);
+add(sous.arms[0], new THREE.BoxGeometry(0.012, 0.55, 0.1), mat("#d8dde2", 0.2, { metalness: 1 }), [0, -0.725, 0]);
 
 const taster = makeRat("#7c7f8c");
 taster.rat.position.set(-0.6, 0, -0.5);
@@ -401,21 +500,40 @@ const windowLight = new THREE.PointLight("#ff9f6a", 4, 6, 2);
 windowLight.position.set(-4.6, 2.8, -0.8);
 scene.add(windowLight);
 
+for (const r of rats) r.rat.userData.pick = r;
+
 const pointer = new THREE.Vector2();
 const raycaster = new THREE.Raycaster();
-const ratAt = (e) => {
+const pickables = [...Object.values(focusables).map((f) => f.group), ...rats.map((r) => r.rat)];
+const pick = (e) => {
+	if (e.target.closest(".card, .dock")) return null;
 	raycaster.setFromCamera(new THREE.Vector2((e.clientX / innerWidth) * 2 - 1, 1 - (e.clientY / innerHeight) * 2), camera);
-	const hit = raycaster.intersectObjects(rats.map((r) => r.rat))[0];
-	return hit && rats.find((r) => r.rat.getObjectById(hit.object.id));
+	let o = raycaster.intersectObjects(pickables)[0]?.object;
+	while (o && !o.userData.pick) o = o.parent;
+	return o?.userData.pick ?? null;
+};
+
+let focused = null;
+let hovered = null;
+const open = (id) => {
+	focused = id;
+	for (const card of document.querySelectorAll(".card")) card.classList.toggle("open", card.id === id);
+	for (const b of document.querySelectorAll(".dock button")) b.classList.toggle("active", b.dataset.focus === id);
 };
 addEventListener("pointermove", (e) => {
 	pointer.set((e.clientX / innerWidth) * 2 - 1, (e.clientY / innerHeight) * 2 - 1);
-	document.body.style.cursor = !e.target.closest("a, .ticket, .chalkboard") && ratAt(e) ? "pointer" : "";
+	hovered = pick(e);
+	document.body.style.cursor = hovered ? "pointer" : "";
 });
-addEventListener("pointerdown", (e) => {
-	const rat = !e.target.closest("a, .ticket, .chalkboard") && ratAt(e);
-	if (rat) rat.jumpAt = clock.getElapsedTime();
+addEventListener("click", (e) => {
+	if (e.target.closest(".card, .dock")) return;
+	const p = pick(e);
+	if (typeof p === "string") open(p);
+	else if (p && !p.hop) p.jumpAt = clock.getElapsedTime();
+	else open(null);
 });
+addEventListener("keydown", (e) => e.key === "Escape" && open(null));
+for (const b of document.querySelectorAll(".dock button")) b.addEventListener("click", () => open(focused === b.dataset.focus ? null : b.dataset.focus));
 
 const resize = () => {
 	renderer.setSize(innerWidth, innerHeight);
@@ -427,14 +545,41 @@ addEventListener("resize", resize);
 resize();
 
 const clock = new THREE.Clock();
-const focus = new THREE.Vector3(0, 0.8, 0.3);
+const ratFocus = new THREE.Vector3(0, 0.8, 0.3);
+const eye = { pos: new THREE.Vector3(0, 2.5, 8), vel: new THREE.Vector3(), goal: new THREE.Vector3() };
+const look = { pos: new THREE.Vector3(0, 1.5, 0), vel: new THREE.Vector3(), goal: new THREE.Vector3() };
+const paw = new THREE.Vector3();
+const bowl = new THREE.Vector3();
+let last = 0;
 
 renderer.setAnimationLoop(() => {
-	const t = still ? 0 : clock.getElapsedTime();
-	const scroll = scrollY / innerHeight;
-	camera.position.set(pointer.x * 0.4, 2.4 + scroll * 2.2 - pointer.y * 0.2, 8.5 / Math.min(camera.aspect, 1.3));
-	camera.lookAt(0, 1.1 + scroll * 2.4, 0);
-	bokeh.uniforms.focus.value = camera.position.distanceTo(focus);
+	const now = clock.getElapsedTime();
+	const dt = Math.min(now - last, 0.05);
+	last = now;
+	const t = still ? 0 : now;
+
+	const f = focusables[focused];
+	if (f) {
+		const height = Math.max(f.h * 1.9, (f.w * 1.6) / camera.aspect);
+		const distance = height / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)));
+		eye.goal.set(f.group.position.x, f.group.position.y - height * 0.12, -1.55 + distance);
+		look.goal.set(f.group.position.x, f.group.position.y - height * 0.12, -1.55);
+	} else {
+		eye.goal.set(pointer.x * 0.4, 2.5 - pointer.y * 0.2, 9.5 / Math.min(camera.aspect, 1.3));
+		look.goal.set(0, 1.5, 0);
+	}
+	for (const s of [eye, look]) {
+		if (still) s.pos.copy(s.goal);
+		s.vel.addScaledVector(s.goal.clone().sub(s.pos), 30 * dt).addScaledVector(s.vel, -8.8 * dt);
+		s.pos.addScaledVector(s.vel, dt);
+	}
+	camera.position.copy(eye.pos);
+	camera.lookAt(look.pos);
+	bokeh.uniforms.focus.value = camera.position.distanceTo(f ? look.pos : ratFocus);
+
+	for (const [id, { group }] of Object.entries(focusables)) group.scale.setScalar(THREE.MathUtils.lerp(group.scale.x, hovered === id && focused !== id ? 1.05 : 1, 0.15));
+	neonMat.color.setScalar(now % 7 > 6.5 && Math.sin(now * 50) > 0 ? 0.5 : 1.6);
+	neonLight.intensity = neonMat.color.r * 2;
 
 	for (const r of rats) {
 		const j = t - r.jumpAt;
@@ -444,11 +589,26 @@ renderer.setAnimationLoop(() => {
 	}
 
 	const sniff = Math.max(0, Math.sin(t * 0.7)) ** 8;
-	chef.arms[0].rotation.set(-1.15 + Math.sin(t * 3) * 0.12 * (1 - sniff), 0, Math.cos(t * 3) * 0.25 * (1 - sniff));
+	chef.arms[0].rotation.set(-1.35 + Math.sin(t * 3) * 0.1 * (1 - sniff), 0, Math.cos(t * 3) * 0.15 * (1 - sniff));
 	chef.rat.position.y = 0.38 + Math.abs(Math.sin(t * 3)) * 0.02 + chef.hop * 0.3;
+	chef.rat.updateMatrixWorld(true);
+	chefPaw.getWorldPosition(paw);
+	bowl.set(2.6 + Math.cos(t * 3) * 0.2 * (1 - sniff), 0.6, 0.1 + Math.sin(t * 3) * 0.2 * (1 - sniff));
+	spoon.position.copy(bowl);
+	spoon.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), paw.clone().sub(bowl).normalize());
+	spoon.scale.y = paw.distanceTo(bowl) + 0.12;
+	spoonBowl.position.copy(bowl);
 	hat.position.y = chef.hop * 0.25;
 	hat.rotation.z = chef.hop * 0.6;
-	sous.arms[0].rotation.x = -1.5 + Math.abs(Math.sin(t * 6)) * 0.5;
+
+	const chop = (t * 2.5) % 18;
+	const cuts = Math.min(Math.floor(chop), 15);
+	sous.arms[0].rotation.x = chop < 15 ? -1.0 - Math.sin(Math.PI * (chop % 1)) * 0.5 : -1.5;
+	const length = 0.45 - cuts * 0.028;
+	cucumber.scale.y = length;
+	cucumber.position.x = cutX - length / 2;
+	cucumberEnd.position.x = cutX - length;
+	slices.forEach((s, i) => (s.visible = i < cuts));
 	sous.rat.position.y = sous.hop * 0.3;
 	taster.rat.rotation.z = Math.sin(t * 1.5) * 0.05;
 	taster.rat.position.y = taster.hop * 0.3;
@@ -471,7 +631,7 @@ renderer.setAnimationLoop(() => {
 	dust.rotation.y = Math.sin(t * 0.05) * 0.2;
 	dust.position.y = Math.sin(t * 0.3) * 0.1;
 	bulbs.forEach((b, i) => (b.rotation.z = Math.sin(t * 0.8 + i) * 0.015));
-	for (const f of flames) f.scale.y = 0.8 + Math.random() * 0.4;
+	for (const flame of flames) flame.scale.y = 0.8 + Math.random() * 0.4;
 	stoveLight.intensity = 1.8 + Math.random() * 0.4;
 	steam.forEach((s, i) => {
 		const p = (t * 0.25 + i / steam.length) % 1;
