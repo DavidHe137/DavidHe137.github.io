@@ -97,18 +97,16 @@ a:hover {
 	margin: 0.4em 0 0;
 }
 
-.card a:not(.pub-title) {
+.card a {
 	color: var(--wine);
 }
 
-.pub-title {
-	font-family: var(--title-font);
-	font-weight: 700;
-	font-size: 1.1em;
-}
-
-.pub-venue {
-	color: #8a6a1f;
+.sr-only {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	overflow: hidden;
+	clip-path: inset(50%);
 }
 
 /* ------------------------------ Dock ------------------------------ */

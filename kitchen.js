@@ -8,11 +8,14 @@ import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js"
 import { FilmPass } from "three/addons/postprocessing/FilmPass.js";
 import { ShaderPass } from "three/addons/postprocessing/ShaderPass.js";
 import { VignetteShader } from "three/addons/shaders/VignetteShader.js";
+import { OBJLoader } from "three/addons/loaders/OBJLoader.js";
 
 const load = (src) => new Promise((resolve) => Object.assign(new Image(), { src, onload: (e) => resolve(e.target) }));
-const [acsImage, cdgsImage] = await Promise.all([
+const [acsImage, cdgsImage, humsterModel, mosterModel] = await Promise.all([
 	load("/assets/acs.png"),
 	load("/assets/cdgs.png"),
+	new OBJLoader().loadAsync("/assets/plush/humster.obj"),
+	new OBJLoader().loadAsync("/assets/plush/moster.obj"),
 	document.fonts.load("100px Yellowtail"),
 	document.fonts.load("30px 'EB Garamond'"),
 	document.fonts.load("bold 30px 'Playfair Display'"),
@@ -46,7 +49,7 @@ const airPass = new RenderPass(air, camera);
 airPass.clear = false;
 composer.addPass(airPass);
 if (!lite) {
-	composer.addPass(new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.4, 0.6, 0.9));
+	composer.addPass(new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.4, 0.6, 1.0));
 	composer.addPass(new FilmPass(0.25));
 	const vignette = new ShaderPass(VignetteShader);
 	vignette.uniforms.darkness.value = 1.1;
@@ -222,14 +225,15 @@ for (let i = 0; i < 5; i++) {
 }
 
 const focusables = {};
-const framed = (id, material, [x, y], [w, h], frame) => {
+const framed = (id, material, [x, y], [w, h], frame, links) => {
 	const group = new THREE.Group();
 	group.position.set(x, y, -1.55);
 	group.userData.pick = id;
 	scene.add(group);
 	if (frame) add(group, new THREE.BoxGeometry(w + 0.1, h + 0.1, 0.05), mat(frame, 0.5), [0, 0, -0.02]);
-	add(group, new THREE.PlaneGeometry(w, h), material, [0, 0, 0.01]).castShadow = false;
-	focusables[id] = { group, w, h };
+	const plane = add(group, new THREE.PlaneGeometry(w, h), material, [0, 0, 0.01]);
+	plane.castShadow = false;
+	focusables[id] = { group, plane, w, h, links };
 };
 
 const wrap = (g, text, x, y, width, lineHeight) => {
@@ -278,24 +282,38 @@ const letterboard = canvasTexture(560, 420, (g) => {
 });
 framed("github", mat("#ffffff", 0.9, { map: letterboard }), [-2.5, 2.45], [0.8, 0.6], "#a8723f");
 
-const poster = (image, title, authors, venue) =>
-	canvasTexture(600, 680, (g) => {
+const poster = (id, image, title, authors, venue, links, position) => {
+	const rects = [];
+	const texture = canvasTexture(1200, 1240, (g) => {
+		g.scale(2, 2);
 		g.fillStyle = "#f6f0e3";
-		g.fillRect(0, 0, 600, 680);
-		const h = Math.min(300, (image.height * 520) / image.width);
+		g.fillRect(0, 0, 600, 620);
+		const h = Math.min(260, (image.height * 520) / image.width);
 		g.drawImage(image, 40, 40, 520, h);
 		g.fillStyle = "#1f1712";
-		g.font = "bold 38px 'Playfair Display'";
-		let y = wrap(g, title, 40, h + 110, 520, 46);
-		g.fillStyle = "#5a4c40";
-		g.font = "25px 'EB Garamond'";
-		y = wrap(g, authors, 40, y + 10, 520, 31);
+		g.font = "bold 36px 'Playfair Display'";
+		let y = wrap(g, title, 40, h + 100, 520, 44);
+		g.fillStyle = "#4a3e34";
+		g.font = "24px 'EB Garamond'";
+		y = wrap(g, authors, 40, y + 6, 520, 29);
 		g.fillStyle = "#8c2a2a";
-		g.font = "italic 32px 'EB Garamond'";
-		g.fillText(venue, 40, y + 20);
+		g.font = "italic 30px 'EB Garamond'";
+		g.fillText(venue, 40, y + 14);
+		g.font = "28px 'EB Garamond'";
+		let x = 40;
+		for (const [label, url] of links) {
+			const w = g.measureText(label).width;
+			g.fillText(label, x, y + 72);
+			g.fillRect(x, y + 78, w, 2);
+			rects.push({ x0: x / 600, x1: (x + w) / 600, y0: (y + 40) / 620, y1: (y + 86) / 620, url });
+			x += w + 36;
+		}
 	});
-framed("acs", mat("#b8b0a3", 0.9, { map: poster(acsImage, "Action Chunk Scheduling for Batched Robot Policy Serving", "Rohan Bansal*, David He*, Nadun Ranawaka Arachchige, Zhenyang Chen, Soobum Kim, Kexin Rong, Danfei Xu", "CoRL 2026") }), [1.3, 2.5], [0.9, 1.02], "#151515");
-framed("cdgs", mat("#b8b0a3", 0.9, { map: poster(cdgsImage, "Compositional Diffusion with Guided Search for Long-Horizon Planning", "Utkarsh A Mishra, David He, Yongxin Chen, Danfei Xu", "ICLR 2026 (Oral)") }), [3.45, 2.5], [0.9, 1.02], "#151515");
+	texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+	framed(id, new THREE.MeshBasicMaterial({ map: texture, color: "#e8e2d6" }), position, [0.9, 0.93], "#151515", rects);
+};
+poster("acs", acsImage, "Action Chunk Scheduling for Batched Robot Policy Serving", "Rohan Bansal*, David He*, Nadun Ranawaka Arachchige, Zhenyang Chen, Soobum Kim, Kexin Rong, Danfei Xu", "CoRL 2026", [["arXiv ↗", "https://arxiv.org/abs/2608.00337"], ["project page ↗", "https://gatech-rl2.github.io/actionchunkscheduling/"]], [1.3, 2.5]);
+poster("cdgs", cdgsImage, "Compositional Diffusion with Guided Search for Long-Horizon Planning", "Utkarsh A Mishra, David He, Yongxin Chen, Danfei Xu", "ICLR 2026 (Oral)", [["arXiv ↗", "https://arxiv.org/abs/2601.00126"], ["project page ↗", "https://cdgsearch.github.io"]], [3.45, 2.5]);
 
 const bulbs = [-1.65, 2.4, 4.7].map((x) => {
 	const pendant = new THREE.Group();
@@ -488,6 +506,26 @@ add(runner.head, new THREE.ExtrudeGeometry(wedge, { depth: 0.35, bevelEnabled: f
 
 const rats = [chef, sous, taster, runner];
 
+const plush = (model, name, scale, position, spin) => {
+	const textures = new THREE.TextureLoader();
+	const map = textures.load(`/assets/plush/${name}.jpg`);
+	map.colorSpace = THREE.SRGBColorSpace;
+	const material = new THREE.MeshStandardMaterial({ map, normalMap: textures.load(`/assets/plush/${name}-normal.jpg`), roughness: 0.9 });
+	model.traverse((m) => m.isMesh && Object.assign(m, { material, castShadow: true, receiveShadow: true }));
+	const box = new THREE.Box3().setFromObject(model);
+	model.position.set(-(box.min.x + box.max.x) / 2, -box.min.y, -(box.min.z + box.max.z) / 2);
+	const group = new THREE.Group();
+	group.add(model);
+	group.scale.setScalar(scale);
+	group.position.set(...position);
+	group.rotation.y = spin;
+	scene.add(group);
+	const toy = { group, y: position[1], spin, jumpAt: -10, hop: 0 };
+	group.userData.pick = toy;
+	return toy;
+};
+const plushies = [plush(humsterModel, "humster", 5, [0.6, 0, -1.0], -0.2), plush(mosterModel, "moster", 4.2, [-3.55, 1.6, -1.35], 0.2)];
+
 scene.add(new THREE.HemisphereLight("#ffe2c0", "#2a1810", 0.45));
 const sun = new THREE.DirectionalLight("#ffc98a", 1.8);
 sun.position.set(-3, 7, 6);
@@ -504,36 +542,42 @@ for (const r of rats) r.rat.userData.pick = r;
 
 const pointer = new THREE.Vector2();
 const raycaster = new THREE.Raycaster();
-const pickables = [...Object.values(focusables).map((f) => f.group), ...rats.map((r) => r.rat)];
+const pickables = [...Object.values(focusables).map((f) => f.group), ...rats.map((r) => r.rat), ...plushies.map((p) => p.group)];
 const pick = (e) => {
-	if (e.target.closest(".card, .dock")) return null;
+	if (e.target.closest(".card, .dock")) return [null];
 	raycaster.setFromCamera(new THREE.Vector2((e.clientX / innerWidth) * 2 - 1, 1 - (e.clientY / innerHeight) * 2), camera);
-	let o = raycaster.intersectObjects(pickables)[0]?.object;
+	const hit = raycaster.intersectObjects(pickables)[0];
+	let o = hit?.object;
 	while (o && !o.userData.pick) o = o.parent;
-	return o?.userData.pick ?? null;
+	const target = o?.userData.pick ?? null;
+	const f = focusables[target];
+	const link = target === focused && hit.object === f?.plane && f.links?.find((l) => hit.uv.x > l.x0 && hit.uv.x < l.x1 && 1 - hit.uv.y > l.y0 && 1 - hit.uv.y < l.y1);
+	return [target, link];
 };
 
 let focused = null;
 let hovered = null;
-const open = (id) => {
+const focus = (id) => {
 	focused = id;
 	for (const card of document.querySelectorAll(".card")) card.classList.toggle("open", card.id === id);
 	for (const b of document.querySelectorAll(".dock button")) b.classList.toggle("active", b.dataset.focus === id);
 };
 addEventListener("pointermove", (e) => {
 	pointer.set((e.clientX / innerWidth) * 2 - 1, (e.clientY / innerHeight) * 2 - 1);
-	hovered = pick(e);
-	document.body.style.cursor = hovered ? "pointer" : "";
+	const [target, link] = pick(e);
+	hovered = target;
+	document.body.style.cursor = link || (target && target !== focused) ? "pointer" : "";
 });
 addEventListener("click", (e) => {
 	if (e.target.closest(".card, .dock")) return;
-	const p = pick(e);
-	if (typeof p === "string") open(p);
-	else if (p && !p.hop) p.jumpAt = clock.getElapsedTime();
-	else open(null);
+	const [target, link] = pick(e);
+	if (link) open(link.url, "_blank");
+	else if (typeof target === "string") focus(target);
+	else if (target) target.hop || (target.jumpAt = clock.getElapsedTime());
+	else focus(null);
 });
-addEventListener("keydown", (e) => e.key === "Escape" && open(null));
-for (const b of document.querySelectorAll(".dock button")) b.addEventListener("click", () => open(focused === b.dataset.focus ? null : b.dataset.focus));
+addEventListener("keydown", (e) => e.key === "Escape" && focus(null));
+for (const b of document.querySelectorAll(".dock button")) b.addEventListener("click", () => focus(focused === b.dataset.focus ? null : b.dataset.focus));
 
 const resize = () => {
 	renderer.setSize(innerWidth, innerHeight);
@@ -560,10 +604,11 @@ renderer.setAnimationLoop(() => {
 
 	const f = focusables[focused];
 	if (f) {
-		const height = Math.max(f.h * 1.9, (f.w * 1.6) / camera.aspect);
+		const height = Math.max(f.h * (f.links ? 1.45 : 1.9), (f.w * 1.6) / camera.aspect);
+		const offset = f.links ? 0 : height * 0.12;
 		const distance = height / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)));
-		eye.goal.set(f.group.position.x, f.group.position.y - height * 0.12, -1.55 + distance);
-		look.goal.set(f.group.position.x, f.group.position.y - height * 0.12, -1.55);
+		eye.goal.set(f.group.position.x, f.group.position.y - offset, -1.55 + distance);
+		look.goal.set(f.group.position.x, f.group.position.y - offset, -1.55);
 	} else {
 		eye.goal.set(pointer.x * 0.4, 2.5 - pointer.y * 0.2, 9.5 / Math.min(camera.aspect, 1.3));
 		look.goal.set(0, 1.5, 0);
@@ -626,6 +671,13 @@ renderer.setAnimationLoop(() => {
 		r.head.rotation.x = THREE.MathUtils.lerp(r.head.rotation.x, sniffing ? 0.45 : pointer.y * 0.25, 0.05);
 		const blink = sniffing || (t + r.rat.id) % 4 < 0.12 ? 0.1 : 1;
 		for (const e of r.eyes) e.scale.y = 0.075 * blink;
+	}
+
+	for (const toy of plushies) {
+		const j = t - toy.jumpAt;
+		toy.hop = j < 0.8 ? Math.sin((j / 0.8) * Math.PI) : 0;
+		toy.group.position.y = toy.y + toy.hop * 0.3;
+		toy.group.rotation.y = toy.spin + (j < 0.8 ? (j / 0.8) * Math.PI * 2 : 0);
 	}
 
 	dust.rotation.y = Math.sin(t * 0.05) * 0.2;
