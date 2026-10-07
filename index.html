@@ -5,7 +5,7 @@
 		<meta charset="UTF-8" />
 		<meta http-equiv="X-UA-Compatible" content="IE=edge" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-		<meta name="theme-color" content="#f1faee" />
+		<meta name="theme-color" content="#f5ecd9" />
 		<link href="/stylesheet.css" rel="stylesheet" type="text/css" />
 		<link
 			rel="apple-touch-icon"
@@ -25,35 +25,41 @@
 			href="/favicon/favicon-16x16.png"
 		/>
 		<link rel="manifest" href="/favicon/site.webmanifest" />
+		<script type="importmap">
+			{
+				"imports": {
+					"three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
+					"three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"
+				}
+			}
+		</script>
+		<script type="module" src="/kitchen.js"></script>
 	</head>
 	<body>
-		<section>
-			<header>
-				<a href="/">
-					<h1>David He</h1>
-				</a>
-				<div id="links">
-					<a href="https://github.com/DavidHe137">github</a>
-				</div>
-			</header>
-			<article>
+		<main>
+			<article class="card" id="about">
+				<h1>David He</h1>
 				<p>
-					🦦 Hi! I'm David. I study Computer Science at Georgia Tech. 
-                    I also enjoy cooking and playing the guitar.
+					Hi! I'm David. I studied Computer Science at Georgia Tech and I'm currently based in New York City 🐀.
+					I also enjoy cooking and playing the guitar.
 				</p>
+				<p><a href="https://github.com/DavidHe137">GitHub</a> &middot; <a href="https://x.com/davidhe137">X</a></p>
 			</article>
-		<h2 class="section-heading">Selected Publications</h2>
-		<article>
-			<div class="pub">
-				<img src="/assets/cdgs.png" alt="CDGS thumbnail" />
-				<div>
-					<a class="pub-title" href="https://arxiv.org/abs/2601.00126">Compositional Diffusion with Guided Search<br />for Long-Horizon Planning</a><br />
-					Utkarsh A Mishra, <strong>David He</strong>, Yongxin Chen, Danfei Xu<br />
-					<em class="pub-venue">ICLR 2026 (Oral)</em> &middot; <a class="pub-link" href="https://cdgsearch.github.io">project page</a>
-				</div>
-			</div>
-		</article>
-		</section>
+			<article class="sr-only">
+				<a class="pub-title" href="https://arxiv.org/abs/2608.00337">Action Chunk Scheduling for Batched Robot Policy Serving</a>
+				<p>Rohan Bansal*, <strong>David He*</strong>, Nadun Ranawaka Arachchige, Zhenyang Chen, Soobum Kim, Kexin Rong, Danfei Xu</p>
+				<p><em class="pub-venue">CoRL 2026</em> &middot; <a class="pub-link" href="https://arxiv.org/abs/2608.00337">arXiv</a> &middot; <a class="pub-link" href="https://gatech-rl2.github.io/actionchunkscheduling/">project page</a></p>
+			</article>
+			<article class="sr-only">
+				<a class="pub-title" href="https://arxiv.org/abs/2601.00126">Compositional Diffusion with Guided Search for Long-Horizon Planning</a>
+				<p>Utkarsh A Mishra, <strong>David He</strong>, Yongxin Chen, Danfei Xu</p>
+				<p><em class="pub-venue">ICLR 2026 (Oral)</em> &middot; <a class="pub-link" href="https://arxiv.org/abs/2601.00126">arXiv</a> &middot; <a class="pub-link" href="https://cdgsearch.github.io">project page</a></p>
+			</article>
+		</main>
+		<nav class="dock">
+			<button data-focus="about">about</button>
+			<button data-focus="papers">papers</button>
+		</nav>
 		<footer>Last updated <span id="last-updated">...</span></footer>
 		<script>
 			fetch(
