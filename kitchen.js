@@ -4,6 +4,10 @@ import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
 import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
 import { BokehPass } from "three/addons/postprocessing/BokehPass.js";
 import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
+import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
+import { FilmPass } from "three/addons/postprocessing/FilmPass.js";
+import { ShaderPass } from "three/addons/postprocessing/ShaderPass.js";
+import { VignetteShader } from "three/addons/shaders/VignetteShader.js";
 
 const lite = matchMedia("(max-width: 700px), (pointer: coarse)").matches;
 const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -28,10 +32,17 @@ composer.addPass(new RenderPass(scene, camera));
 const bokeh = new BokehPass(scene, camera, { focus: 9, aperture: 0.005, maxblur: 0.008 });
 bokeh.enabled = !lite;
 composer.addPass(bokeh);
-const steamScene = new THREE.Scene();
-const steamPass = new RenderPass(steamScene, camera);
-steamPass.clear = false;
-composer.addPass(steamPass);
+const air = new THREE.Scene();
+const airPass = new RenderPass(air, camera);
+airPass.clear = false;
+composer.addPass(airPass);
+if (!lite) {
+	composer.addPass(new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.4, 0.6, 0.9));
+	composer.addPass(new FilmPass(0.25));
+	const vignette = new ShaderPass(VignetteShader);
+	vignette.uniforms.darkness.value = 1.1;
+	composer.addPass(vignette);
+}
 composer.addPass(new OutputPass());
 
 const canvasTexture = (w, h, draw) => {
@@ -238,8 +249,8 @@ add(pot, new THREE.CircleGeometry(0.53, 48), mat("#b8361f", 0.25), [0, 0.4, 0]).
 for (const s of [-1, 1]) add(pot, new THREE.TorusGeometry(0.1, 0.025, 8, 16), copper, [s * 0.6, 0.38, 0]).rotation.y = Math.PI / 2;
 
 const steam = Array.from({ length: 8 }, () => {
-	const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: glow, color: "#fff4e6", transparent: true, depthWrite: false }));
-	steamScene.add(s);
+	const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: glow, color: "#fff4e6", transparent: true, depthTest: false }));
+	air.add(s);
 	return s;
 });
 
@@ -259,9 +270,33 @@ for (const r of [0.1, 0.22, 0.34, 0.45])
 		s.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), new THREE.Vector3(-Math.sin(a), 0.7, Math.cos(a)).normalize());
 	}
 
-add(scene, new THREE.CylinderGeometry(0.22, 0.2, 0.06, 32), mat("#f2efe8", 0.3), [4.3, 0.03, 0.6]);
-add(scene, new THREE.CylinderGeometry(0.13, 0.1, 0.24, 32), mat("#f2efe8", 0.3), [4.3, 0.18, 0.6]);
-add(scene, new THREE.TorusGeometry(0.06, 0.018, 8, 16), mat("#f2efe8", 0.3), [4.45, 0.19, 0.6]);
+add(scene, new THREE.CylinderGeometry(0.22, 0.2, 0.06, 32), mat("#f2efe8", 0.3), [5.0, 0.03, 0.3]);
+add(scene, new THREE.CylinderGeometry(0.13, 0.1, 0.24, 32), mat("#f2efe8", 0.3), [5.0, 0.18, 0.3]);
+add(scene, new THREE.TorusGeometry(0.06, 0.018, 8, 16), mat("#f2efe8", 0.3), [5.15, 0.19, 0.3]);
+
+const dust = new THREE.Points(
+	new THREE.BufferGeometry().setAttribute("position", new THREE.Float32BufferAttribute(Array.from({ length: 600 }, (_, i) => [Math.random() * 14 - 7, Math.random() * 4.5, Math.random() * 2.5 - 1][i % 3]), 3)),
+	new THREE.PointsMaterial({ map: glow, color: "#ffd9a0", size: 0.06, transparent: true, opacity: 0.6, depthTest: false }),
+);
+air.add(dust);
+
+const bottleGlass = new THREE.MeshPhysicalMaterial({ color: "#1f4a2a", roughness: 0.1, clearcoat: 1, transparent: true, opacity: 0.85 });
+add(scene, new THREE.CylinderGeometry(0.16, 0.16, 0.7, 32), bottleGlass, [-4.0, 0.35, 0.9]);
+add(scene, sphere, bottleGlass, [-4.0, 0.7, 0.9], [0.16, 0.12, 0.16]);
+add(scene, new THREE.CylinderGeometry(0.05, 0.06, 0.4, 16), bottleGlass, [-4.0, 0.95, 0.9]);
+add(scene, new THREE.CylinderGeometry(0.165, 0.165, 0.25, 32), mat("#efe2c4", 0.8), [-4.0, 0.32, 0.9]);
+const wineGlass = new THREE.LatheGeometry([[0, 0], [0.13, 0], [0.13, 0.015], [0.015, 0.03], [0.015, 0.3], [0.1, 0.36], [0.14, 0.48], [0.13, 0.6]].map((p) => new THREE.Vector2(...p)), 32);
+const crystal = new THREE.MeshPhysicalMaterial({ color: "#ffffff", roughness: 0.02, clearcoat: 1, transparent: true, opacity: 0.25, side: THREE.DoubleSide });
+for (const [x, z] of [[-3.5, 1.4], [-3.15, 1.25]]) {
+	add(scene, wineGlass, crystal, [x, 0, z]).castShadow = false;
+	add(scene, new THREE.CylinderGeometry(0.12, 0.08, 0.1, 24), mat("#5a0f1f", 0.1), [x, 0.39, z]);
+}
+
+add(scene, new THREE.BoxGeometry(1.2, 0.06, 0.7), mat("#ffffff", 0.6, { map: wood("#b07a45") }), [4.0, 0.03, 1.2]);
+const cheese = new THREE.ExtrudeGeometry(new THREE.Shape([new THREE.Vector2(0, 0), new THREE.Vector2(0.4, 0), new THREE.Vector2(0, 0.25)]), { depth: 0.22, bevelEnabled: false });
+add(scene, cheese, mat("#f2c94c", 0.5), [3.55, 0.06, 1.1]);
+add(scene, cheese, mat("#fff3d6", 0.6), [4.0, 0.06, 1.25]).rotation.y = 0.8;
+for (let i = 0; i < 14; i++) add(scene, sphere, mat("#6a2a5a", 0.25), [4.4 + Math.cos(i * 2.4) * 0.1 * Math.sqrt(i / 3), 0.1 + (i < 5 ? 0.06 : 0), 1.1 + Math.sin(i * 2.4) * 0.1 * Math.sqrt(i / 3)], [0.045, 0.045, 0.045]);
 
 const pink = mat("#e3a3ad", 0.6);
 const belly = new THREE.MeshPhysicalMaterial({ color: "#ddd6df", roughness: 0.9, sheen: 1, sheenRoughness: 0.4, sheenColor: "#ffffff" });
@@ -332,7 +367,10 @@ add(hat, sphere, mat("#ffffff", 0.8), [0, 0.58, -0.02], [0.24, 0.14, 0.22]);
 add(chef.arms[0], new THREE.CylinderGeometry(0.02, 0.02, 0.8), mat("#a0703c", 0.6), [0, -0.65, 0]);
 add(chef.arms[0], sphere, mat("#a0703c", 0.6), [0, -1.05, 0], [0.06, 0.04, 0.08]);
 
+add(chef.rat, sphere, mat("#f7f4ee", 0.85), [0, 0.38, 0.16], [0.26, 0.3, 0.18]);
+
 const sous = makeRat("#8a8178");
+add(sous.rat, sphere, mat("#3d5a80", 0.9), [0, 0.38, 0.16], [0.26, 0.3, 0.18]);
 sous.rat.position.set(-2.4, 0, -0.35);
 add(sous.rat, new THREE.TorusGeometry(0.2, 0.05, 12, 32), mat("#b0302a", 0.8), [0, 0.8, 0]).rotation.x = Math.PI / 2;
 add(sous.arms[0], new THREE.CylinderGeometry(0.025, 0.025, 0.16), mat("#3a2412", 0.5), [0, -0.38, 0]);
@@ -430,6 +468,8 @@ renderer.setAnimationLoop(() => {
 		for (const e of r.eyes) e.scale.y = 0.075 * blink;
 	}
 
+	dust.rotation.y = Math.sin(t * 0.05) * 0.2;
+	dust.position.y = Math.sin(t * 0.3) * 0.1;
 	bulbs.forEach((b, i) => (b.rotation.z = Math.sin(t * 0.8 + i) * 0.015));
 	for (const f of flames) f.scale.y = 0.8 + Math.random() * 0.4;
 	stoveLight.intensity = 1.8 + Math.random() * 0.4;
