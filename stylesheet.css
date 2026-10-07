@@ -1,15 +1,14 @@
 @import "normalize.css";
-@import url("https://fonts.googleapis.com/css2?family=Montserrat&family=Mulish&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=EB+Garamond:ital@0;1&display=swap");
 
-/* https://coolors.co */
 :root {
-	--color-1: #f1faee;
-	--color-2: #e63946;
-	--color-3: #1d3557;
-	--color-4: #457b9d;
-	--color-5: #a8dadc;
-	--title-font: "Mulish", sans-serif;
-	--paragraph-font: "Montserrat", sans-serif;
+	--color-1: #f5ecd9;
+	--color-2: #8c2a2a;
+	--color-3: #2e1f16;
+	--color-4: #5b6b3a;
+	--color-5: #c9b48a;
+	--title-font: "Playfair Display", serif;
+	--paragraph-font: "EB Garamond", serif;
 }
 
 html {
@@ -44,6 +43,28 @@ body {
 body {
 	display: flex;
 	flex-direction: column;
+	color: var(--color-3);
+}
+
+body::before {
+	content: "";
+	flex-shrink: 0;
+	height: 16px;
+	background: repeating-conic-gradient(var(--color-2) 0 25%, var(--color-1) 0 50%) 0 0 / 16px 16px;
+}
+
+header {
+	text-align: center;
+}
+
+header h1 {
+	font-style: italic;
+	font-size: 2.6em;
+	margin-bottom: 0.2em;
+}
+
+#links {
+	justify-content: center;
 }
 
 section {
@@ -105,20 +126,25 @@ header > a:hover {
 /* --------------------------- Publications --------------------------- */
 .section-heading {
 	margin-top: 1.5em;
+	text-align: center;
+	font-weight: 400;
+	font-style: italic;
+	color: var(--color-2);
+}
+
+.section-heading::before,
+.section-heading::after {
+	content: " ~ ";
+	color: var(--color-5);
 }
 
 .pub {
 	display: flex;
 	gap: 1em;
 	align-items: flex-start;
-	border: 1px solid var(--color-5);
-	border-radius: 6px;
-	padding: 0.75em;
+	border-top: 3px double var(--color-5);
+	padding: 1em 0;
 	font-size: 0.75em;
-}
-
-.pub + .pub {
-	margin-top: 1em;
 }
 
 .pub img {
