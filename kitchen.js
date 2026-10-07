@@ -506,11 +506,11 @@ add(runner.head, new THREE.ExtrudeGeometry(wedge, { depth: 0.35, bevelEnabled: f
 
 const rats = [chef, sous, taster, runner];
 
-const plush = (model, name, scale, position, spin) => {
+const plush = (model, name, scale, position, spin, tilt) => {
 	const textures = new THREE.TextureLoader();
 	const map = textures.load(`/assets/plush/${name}.jpg`);
 	map.colorSpace = THREE.SRGBColorSpace;
-	const material = new THREE.MeshStandardMaterial({ map, normalMap: textures.load(`/assets/plush/${name}-normal.jpg`), roughness: 0.9 });
+	const material = new THREE.MeshStandardMaterial({ map, emissiveMap: map, emissive: "#6a5a4a", roughness: 0.85 });
 	model.traverse((m) => m.isMesh && Object.assign(m, { material, castShadow: true, receiveShadow: true }));
 	const box = new THREE.Box3().setFromObject(model);
 	model.position.set(-(box.min.x + box.max.x) / 2, -box.min.y, -(box.min.z + box.max.z) / 2);
@@ -518,13 +518,13 @@ const plush = (model, name, scale, position, spin) => {
 	group.add(model);
 	group.scale.setScalar(scale);
 	group.position.set(...position);
-	group.rotation.y = spin;
+	group.rotation.set(tilt, spin, 0);
 	scene.add(group);
 	const toy = { group, y: position[1], spin, jumpAt: -10, hop: 0 };
 	group.userData.pick = toy;
 	return toy;
 };
-const plushies = [plush(humsterModel, "humster", 5, [0.6, 0, -1.0], -0.2), plush(mosterModel, "moster", 4.2, [-3.55, 1.6, -1.35], 0.2)];
+const plushies = [plush(humsterModel, "humster", 7.5, [0.65, 0, -0.55], -0.2, 0.35), plush(mosterModel, "moster", 5.5, [-1.2, 0, 0.6], 0.3, 0.3)];
 
 scene.add(new THREE.HemisphereLight("#ffe2c0", "#2a1810", 0.45));
 const sun = new THREE.DirectionalLight("#ffc98a", 1.8);
